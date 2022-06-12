@@ -67,6 +67,29 @@ function updateResponse() {
     return (++lastResponseCount >= MAX_BURST_RESPONSE) ? " [sleeping]" : "";
 }
 
+function runCode(from, code, conference, ext, runCmd, deletes) {
+    const fileName = from + "." + ext;
+
+    fs.writeFile(fileName, code, (err) => {
+        if (err) console.error(err);
+    });
+    
+    exec(runCmd.replace("$f", from), (error, stdout, stderr) => {
+        if (error) {
+            sendMessage(conference, error);
+        } else {
+            sendMessage(conference, stdout);
+        }
+
+        deletes.forEach((file) => {
+            fs.unlink(file.replace("$f", from), (err) => {
+                if (err) console.error(err);
+            });
+        })
+
+    });
+}
+
 
 
 // **************  XMPP CODE *****************
@@ -111,23 +134,14 @@ xmpp.on('groupchat', (conference, from, message, stamp, delay) => {
             const code = message.replaceAll(/^py run\s*/g, "");
             console.log("Received code:\n" + code);
 
-            const fileName = from + ".py";
+            runCode(from, code, conference, "py", "python $f.py", ["$f.py"])
+        } else if (message.startsWith("lua run")) {
 
-            fs.writeFile(fileName, code, (err) => {
-                if (err) console.error(err);
-            });
+            const code = message.replaceAll(/^lua run\s*/g, "");
+            console.log("Received code:\n" + code);
 
-            
-            exec(`python ${fileName}`, (error, stdout, stderr) => {
-                if (error) {
-                    sendMessage(conference, error);
-                } else {
-                    sendMessage(conference, `${stdout}`);
-                }
-                fs.unlink(fileName, (err) => {
-                    if (err) console.error(err);
-                });
-            });
+            runCode(from, code, conference, "lua", "lua $f.lua", ["$f.lua"]);
+
         }
     }
 });

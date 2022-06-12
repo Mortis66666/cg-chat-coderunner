@@ -1,0 +1,11 @@
+{
+    "jid": "1234567@chat.codingame.com",
+    "password": "",
+    "nickname": "",
+    "host": "chat.codingame.com",
+    "port": 5222,
+    "muc": "conference.codingame.com",
+    "groupchats": [
+        "world"
+    ]
+}

@@ -4,6 +4,7 @@ const xmpp = require('simple-xmpp'),
     config = require('./config.json'),
     Stanza = require('node-xmpp-client').Stanza,
     fs = require('fs'),
+    axios = require('axios'),
     exec = require('child_process').exec;
 
 
@@ -123,12 +124,20 @@ xmpp.on('online', data => {
 // });
 
 xmpp.on('groupchat', (conference, from, message, stamp, delay) => {
-    console.log( new Date().toISOString().slice(0,19) + " " + from + " " + message.replace(/\n/g,"\n    "));
+    if (readyToRespond)
+        console.log(from + ": " + message.replace(/\n/g, "\n    "));
+
+
     if (readyToRespond && from != config.nickname) {
+
+        // if (message.match(/^http:\/\/chat.codingame.com\/pastebin\/.+$/)) {
+        //     message = await axios.get(message).data;
+        // }
+
         if (message.startsWith("py run")) {
 
-            if (message.match(/import os/g) || message.match(/__import__("os")/g)) {
-                return sendMessage(conference, "You are not allowed to import the os library")
+            if (message.match(/import\s+os/g) || message.match(/__import__\s*(\s*"os"\s*)/g) || message.match(/__import__\s*(\s*'os'\s*)/g)) {
+                return sendMessage(conference, "You are not allowed to import the os module")
             }
 
             const code = message.replaceAll(/^py run\s*/g, "");

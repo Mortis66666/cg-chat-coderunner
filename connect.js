@@ -7,6 +7,7 @@ const xmpp = require('simple-xmpp'),
     axios = require('axios'),
     exec = require('child_process').exec;
 
+const running = [];
 
 let queueTimer = null,
     queue = [],
@@ -79,7 +80,7 @@ function runCode(from, code, conference, ext, runCmd, deletes) {
         if (error) {
             sendMessage(conference, error);
         } else {
-            sendMessage(conference, stdout);
+            sendMessage(conference, stdout || "No output");
         }
 
         deletes.forEach((file) => {
@@ -123,22 +124,31 @@ xmpp.on('online', data => {
 //     }
 // });
 
-xmpp.on('groupchat', (conference, from, message, stamp, delay) => {
+xmpp.on('groupchat', async (conference, from, message, stamp, delay) => {
     if (readyToRespond)
         console.log(from + ": " + message.replace(/\n/g, "\n    "));
 
 
     if (readyToRespond && from != config.nickname) {
 
-        // if (message.match(/^http:\/\/chat.codingame.com\/pastebin\/.+$/)) {
-        //     message = await axios.get(message).data;
-        // }
+        if (message.match(/^http:\/\/chat.codingame.com\/pastebin\/.+$/)) {
+            let result = await axios.get(message);
+            message = result.data;
+        }
 
         if (message.startsWith("py run")) {
 
-            if (message.match(/import\s+os/g) || message.match(/__import__\s*(\s*"os"\s*)/g) || message.match(/__import__\s*(\s*'os'\s*)/g)) {
-                return sendMessage(conference, "You are not allowed to import the os module")
+            for (let module of config['banned-modules']) {
+                console.log(module);
+                if (
+                    message.match(new RegExp(`import\\s+${module}`, 'g')) ||
+                    message.match(new RegExp(`__import__\\s*(\\s*"${module}"\\s*)`, 'g')) ||
+                    message.match(new RegExp(`__import__\\s*(\\s*'${module}'\\s*)`, 'g'))
+                ) {
+                    return sendMessage(conference, `You are not allowed to import the ${module} module`)
+                }
             }
+
 
             const code = message.replaceAll(/^py run\s*/g, "");
             console.log("Received code:\n" + code);
